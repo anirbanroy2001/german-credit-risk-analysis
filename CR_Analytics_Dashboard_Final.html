@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>German Credit Risk Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#1A2340;--red:#E24B4A;--green:#1D9E75;--amber:#BA7517;
+  --teal:#028090;--purple:#534AB7;--bg:#F1F5F9;--card:#FFFFFF;
+  --text:#1E293B;--muted:#64748B;--border:#E2E8F0;
+}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition: background 0.3s;}
+
+/* HEADER */
+.header{background:var(--dark);color:white;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;transition: all 0.3s;}
+.header-title{font-size:18px;font-weight:700;letter-spacing:-0.2px}
+.header-sub{font-size:12px;color:#8CA0BC;margin-top:3px}
+.badge-group{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.badge{background:var(--red);color:white;font-size:11px;padding:4px 12px;border-radius:20px;font-weight:600;white-space:nowrap}
+.creator-tag{font-size:10px;color:#8CA0BC;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+/* NAV */
+.nav{background:white;border-bottom:2px solid var(--border);display:flex;padding:0 24px;overflow-x:auto;scrollbar-width: none;}
+.nav::-webkit-scrollbar { display: none; }
+.nav-btn{padding:11px 16px;border:none;background:none;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Arial,sans-serif;font-weight:500;white-space:nowrap;transition:color .15s,border-color .15s}
+.nav-btn:hover{color:var(--red)}
+.nav-btn.active{color:var(--red);border-bottom-color:var(--red)}
+
+/* PAGES */
+.page{display:none;padding:20px 24px;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* KPI STRIP */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border-radius:10px;padding:16px 18px;border:1px solid var(--border)}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.kpi-value{font-size:30px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi-delta{font-size:11px;color:var(--muted)}
+
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-1{margin-bottom:16px}
+
+/* CARD */
+.card{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:18px}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.card-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+canvas{max-height:220px;width:100%!important}
+
+/* INSIGHT BOX */
+.insight{background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#92400E;line-height:1.6}
+.insight strong{color:#B45309}
+
+/* THRESHOLD CARDS */
+.thresh-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.thresh-card{background:var(--card);border-radius:10px;border-top:4px solid;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px}
+.thresh-name{font-size:14px;font-weight:700;margin-bottom:10px}
+.thresh-stat{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)}
+.thresh-stat:last-child{border-bottom:none}
+.thresh-lbl{color:var(--muted)}
+.thresh-val{font-weight:600}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--dark);color:white;padding:10px 14px;text-align:left;font-size:12px;font-weight:600}
+.data-table td{padding:10px 14px;border-bottom:1px solid var(--border)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr.best td{background:#F0FDF4;font-weight:600;color:#166534}
+
+/* MATRIX */
+.matrix-wrap{overflow-x:auto;margin-top:10px}
+.matrix{border-collapse:collapse;font-size:12px;width:100%;min-width:480px}
+.matrix th,.matrix td{border:1px solid var(--border);padding:9px 14px;text-align:center;font-weight:600}
+.matrix thead th{background:var(--dark);color:white;font-weight:600}
+.matrix tbody th{background:#F8FAFC;font-weight:600;text-align:left;color:var(--text)}
+
+/* PILL */
+.pill{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600}
+
+/* REC CARDS */
+.rec-card{background:var(--card);border-radius:10px;border:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;padding:16px;margin-bottom:12px}
+.rec-num{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:white;flex-shrink:0;margin-top:2px}
+.rec-body{flex:1}
+.rec-title{font-size:14px;font-weight:700;margin-bottom:5px}
+.rec-text{font-size:12px;color:var(--muted);line-height:1.6}
+.rec-tag{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;white-space:nowrap;align-self:flex-start;margin-top:4px}
+
+/* TIER TABLE ROWS */
+.tier-low td{background:#F0FDF4}
+.tier-med td{background:#FFFBEB}
+.tier-high td{background:#FFF5F5}
+
+/* MOBILE VIEW OVERRIDES */
+.mobile-view .header { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+.mobile-view .header-actions { width: 100%; display: flex; justify-content: space-between; align-items: flex-end; }
+.mobile-view .badge-group { align-items: flex-end; }
+.mobile-view .header-title { font-size: 16px; }
+.mobile-view .header-sub { font-size: 11px; }
+.mobile-view .nav { padding: 0 12px; }
+.mobile-view .page { padding: 16px 12px; }
+.mobile-view .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.mobile-view .kpi { padding: 12px; }
+.mobile-view .kpi-value { font-size: 22px; }
+.mobile-view .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+.mobile-view .thresh-row { grid-template-columns: 1fr; gap: 12px; }
+.mobile-view .card { padding: 14px; }
+.mobile-view .matrix-wrap { margin-left: -4px; margin-right: -4px; }
+.mobile-view .data-table { font-size: 12px; }
+.mobile-view .data-table th, .mobile-view .data-table td { padding: 8px 10px; }
+
+/* MOBILE ALTERNATIVE FOR THRESHOLD CHART */
+.mobile-view #threshChartContainer { display: none; }
+.mobile-view #mobileThreshContainer { display: block; }
+#mobileThreshContainer { display: none; margin-top: 10px; }
+.mobile-thresh-card { background: #F8FAFC; border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+.mobile-thresh-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.mobile-thresh-val { font-weight: 700; font-size: 13px; color: var(--dark); }
+.mobile-thresh-bars { display: flex; flex-direction: column; gap: 6px; }
+.mobile-thresh-bar-row { display: flex; align-items: center; gap: 10px; }
+.mobile-thresh-label { font-size: 10px; width: 50px; color: var(--muted); font-weight: 600; }
+.mobile-thresh-progress-bg { flex: 1; height: 6px; background: #E2E8F0; border-radius: 3px; position: relative; }
+.mobile-thresh-progress-fill { height: 100%; border-radius: 3px; }
+.mobile-thresh-percent { font-size: 10px; width: 30px; font-weight: 700; text-align: right; }
+
+/* TOGGLE SWITCH STYLE */
+.toggle-container { display: flex; align-items: center; gap: 10px; }
+.toggle-label { font-size: 11px; color: #8CA0BC; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .3s; border-radius: 24px; border: 1px solid #475569; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+input:checked + .slider { background-color: var(--red); border-color: var(--red); }
+input:checked + .slider:before { transform: translateX(18px); }
+</style>
+</head>
+<body id="mainBody">
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header-title">German Credit Risk Analytics Dashboard</div>
+    <div class="header-sub">1,000 applicants · 9 features · June 2026</div>
+  </div>
+  <div class="header-actions">
+    <div class="toggle-container">
+      <span class="toggle-label">Mobile View</span>
+      <label class="switch">
+        <input type="checkbox" id="mobileToggle" onchange="toggleMobileView(this)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="badge-group">
+      <span class="badge">Analytics Project</span>
+      <span class="creator-tag">Created By - Anirban Roy</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('overview',this)">Overview</button>
+  <button class="nav-btn" onclick="showPage('eda',this)">EDA Insights</button>
+  <button class="nav-btn" onclick="showPage('model',this)">Prediction Model</button>
+  <button class="nav-btn" onclick="showPage('threshold',this)">Threshold Analysis</button>
+  <button class="nav-btn" onclick="showPage('segmentation',this)">Risk Segmentation</button>
+  <button class="nav-btn" onclick="showPage('recs',this)">Recommendations</button>
+</nav>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="page active" id="page-overview">
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Total Applicants</div>
+      <div class="kpi-value" style="color:var(--dark)">1,000</div>
+      <div class="kpi-delta">German Credit Dataset</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Bad Risk Rate</div>
+      <div class="kpi-value" style="color:var(--red)">23.6%</div>
+      <div class="kpi-delta">236 bad applicants</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Best Model AUC</div>
+      <div class="kpi-value" style="color:var(--green)">0.990</div>
+      <div class="kpi-delta">Gradient Boosting</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Bad Loans Caught</div>
+      <div class="kpi-value" style="color:var(--amber)">95.7%</div>
+      <div class="kpi-delta">At threshold 0.30</div>
+    </div>
+  </div>
+
+  
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Good vs Bad Risk Split</div>
+      <div class="card-sub">764 good (76.4%) · 236 bad (23.6%)</div>
+      <canvas id="donut1"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Bad Risk Rate by Savings</div>
+      <div class="card-sub">Missing values treated as 'none'</div>
+      <canvas id="savBar"></canvas>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Avg Credit: Good vs Bad</div>
+      <div class="card-sub">Bad risk applicants borrow 2.6× more</div>
+      <canvas id="creditBar"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Duration: Good vs Bad</div>
+      <div class="card-sub">Bad risk loans run 76% longer</div>
+      <canvas id="durBar"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EDA ═══ -->
+<div class="page" id="page-eda">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Bad Risk Rate by Loan Purpose</div>
+      <div class="card-sub">Dashed line = overall average (23.6%)</div>
+      <canvas id="purposeBar" style="max-height:260px"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Bad Risk Rate by Housing Type</div>
+      <div class="card-sub">Homeowners are 3× safer than renters</div>
+      <canvas id="housingBar"></canvas>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Bad Risk Rate by Age Group</div>
+      <div class="card-sub">Young applicants carry the highest bad rate</div>
+      <canvas id="ageBar"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Bad Risk Rate by Job Skill</div>
+      <div class="card-sub">Unskilled non-residents carry highest risk</div>
+      <canvas id="jobBar"></canvas>
+    </div>
+  </div>
+  <div class="card grid-1">
+    <div class="card-title">Savings × Checking Underwriting Matrix</div>
+    <div class="card-sub">Bad loan rate (%) for every combination</div>
+    <div class="matrix-wrap">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Savings \ Checking</th>
+            <th>None</th>
+            <th>Little</th>
+            <th>Moderate</th>
+            <th>Rich</th>
+          </tr>
+        </thead>
+        <tbody id="matrixBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODEL ═══ -->
+<div class="page" id="page-model">
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Best Model</div>
+      <div class="kpi-value" style="color:var(--green);font-size:18px;margin-top:4px">Gradient Boosting</div>
+      <div class="kpi-delta">Selected for deployment</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">ROC-AUC</div>
+      <div class="kpi-value" style="color:var(--green)">0.990</div>
+      <div class="kpi-delta">Near-elite performance</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Precision (Bad)</div>
+      <div class="kpi-value" style="color:var(--teal)">0.909</div>
+      <div class="kpi-delta">At threshold 0.50</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Recall (Bad)</div>
+      <div class="kpi-value" style="color:var(--amber)">0.851</div>
+      <div class="kpi-delta">At threshold 0.50</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Model Comparison — ROC-AUC</div>
+      <div class="card-sub">Gradient Boosting selected as best</div>
+      <canvas id="modelBar"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 10 Feature Importances</div>
+      <div class="card-sub">Financial signals dominate demographics</div>
+      <canvas id="featBar" style="max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title">Full Model Comparison Table</div>
+    <div class="card-sub" style="margin-bottom:12px">Evaluated on held-out 20% test set</div>
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr><th>Model</th><th>ROC-AUC</th><th>Precision</th><th>Recall</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Logistic Regression</td><td>0.970</td><td>0.750</td><td>0.830</td>
+            <td><span class="pill" style="background:#F1F5F9;color:var(--muted)">Baseline</span></td>
+          </tr>
+          <tr>
+            <td>Random Forest</td><td>0.970</td><td>0.813</td><td>0.830</td>
+            <td><span class="pill" style="background:#EFF6FF;color:#1D4ED8">Strong</span></td>
+          </tr>
+          <tr class="best">
+            <td>Gradient Boosting ★</td><td>0.990</td><td>0.909</td><td>0.851</td>
+            <td><span class="pill" style="background:#DCFCE7;color:#166534">Best</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ THRESHOLD ═══ -->
+<div class="page" id="page-threshold">
+  <div class="insight">
+    <strong>Threshold Impact:</strong> Approving a bad loan costs more than declining a good one.
+  </div>
+
+  <div class="thresh-row">
+    <div class="thresh-card" style="border-top-color:var(--red)">
+      <div class="thresh-name" style="color:var(--red)">Conservative — 0.30</div>
+      <div class="thresh-stat"><span class="thresh-lbl">Recall</span><span class="thresh-val" style="color:var(--red)">95.7%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Precision</span><span class="thresh-val">88.2%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Best for</span><span class="thresh-val" style="color:var(--muted)">Mortgages</span></div>
+    </div>
+    <div class="thresh-card" style="border-top-color:var(--teal)">
+      <div class="thresh-name" style="color:var(--teal)">Balanced — 0.50</div>
+      <div class="thresh-stat"><span class="thresh-lbl">Recall</span><span class="thresh-val" style="color:var(--amber)">85.1%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Precision</span><span class="thresh-val">90.9%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Best for</span><span class="thresh-val" style="color:var(--muted)">Volume</span></div>
+    </div>
+    <div class="thresh-card" style="border-top-color:var(--purple)">
+      <div class="thresh-name" style="color:var(--purple)">Strict — 0.70</div>
+      <div class="thresh-stat"><span class="thresh-lbl">Recall</span><span class="thresh-val" style="color:var(--purple)">72.3%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Precision</span><span class="thresh-val">91.9%</span></div>
+      <div class="thresh-stat"><span class="thresh-lbl">Best for</span><span class="thresh-val" style="color:var(--muted)">High Risk</span></div>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title">Precision-Recall Performance Matrix</div>
+    <div class="card-sub">Performance metrics across key classification thresholds</div>
+    
+    <div id="threshChartContainer">
+      <canvas id="threshChart" style="max-height:300px"></canvas>
+    </div>
+    
+    <div id="mobileThreshContainer">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEGMENTATION ═══ -->
+<div class="page" id="page-segmentation">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Applicant Distribution by Risk Tier</div>
+      <div class="card-sub">Automated tiering based on model probability</div>
+      <canvas id="tierPie"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Credit Amount by Risk Tier</div>
+      <div class="card-sub">High risk applicants borrow 2.7× more than low risk</div>
+      <canvas id="tierCredit"></canvas>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title">Risk Segmentation Definitions</div>
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr><th>Tier</th><th>Prob. Range</th><th>Applicants</th><th>Avg Credit</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr class="tier-low"><td><strong>Low Risk</strong></td><td>0.00 - 0.30</td><td>760</td><td>DM 2,352</td><td><span class="pill" style="background:#DCFCE7;color:#166534">Auto-Approve</span></td></tr>
+          <tr class="tier-med"><td><strong>Medium Risk</strong></td><td>0.31 - 0.60</td><td>8</td><td>DM 3,840</td><td><span class="pill" style="background:#FEF3C7;color:#92400E">Manual Review</span></td></tr>
+          <tr class="tier-high"><td><strong>High Risk</strong></td><td>0.61 - 1.00</td><td>232</td><td>DM 6,264</td><td><span class="pill" style="background:#FEE2E2;color:#991B1B">Auto-Decline</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RECS ═══ -->
+<div class="page" id="page-recs">
+  <div class="rec-card">
+    <div class="rec-num" style="background:var(--red)">1</div>
+    <div class="rec-body">
+      <div class="rec-title">Deploy Conservative Threshold (0.30)</div>
+      <div class="rec-text">Catching 95.7% of bad loans is critical. The cost of a bad loan (DM 6,225 avg) is significantly higher than the opportunity cost of declining a good applicant.</div>
+    </div>
+    <span class="rec-tag" style="background:#FEE2E2;color:#991B1B">Priority: High</span>
+  </div>
+  <div class="rec-card">
+    <div class="rec-num" style="background:var(--amber)">2</div>
+    <div class="rec-body">
+      <div class="rec-title">Enhanced Underwriting for Renters</div>
+      <div class="rec-text">Applicants in rental or free housing are 3× more likely to default. Implement stricter verification or lower credit limits for these segments.</div>
+    </div>
+    <span class="rec-tag" style="background:#FEF3C7;color:#92400E">Priority: Medium</span>
+  </div>
+  <div class="rec-card">
+    <div class="rec-num" style="background:var(--teal)">3</div>
+    <div class="rec-body">
+      <div class="rec-title">Targeted Products for Young Applicants</div>
+      <div class="rec-text">The 19-25 age group shows the highest risk (32.1%). Consider "Credit Builder" products with shorter durations and lower initial amounts for this demographic.</div>
+    </div>
+    <span class="rec-tag" style="background:#E0F2FE;color:#0369A1">Priority: Low</span>
+  </div>
+</div>
+
+<script>
+// ── GLOBALS ──────────────────────────────────────────────────────────────────
+var RED    = '#E24B4A';
+var GREEN  = '#1D9E75';
+var AMBER  = '#BA7517';
+var TEAL   = '#028090';
+var PURPLE = '#534AB7';
+var MUTED  = '#64748B';
+
+Chart.defaults.font.family = 'Arial';
+Chart.defaults.color = '#64748B';
+
+// ── CORE LOGIC ───────────────────────────────────────────────────────────────
+function showPage(pageId, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Trigger resize to ensure charts fit new container
+  Object.values(Chart.instances).forEach(chart => chart.resize());
+}
+
+function toggleMobileView(checkbox) {
+  if (checkbox.checked) {
+    document.body.classList.add('mobile-view');
+  } else {
+    document.body.classList.remove('mobile-view');
+  }
+  // Smooth transition for charts
+  setTimeout(() => {
+    Object.values(Chart.instances).forEach(chart => {
+      chart.resize();
+    });
+  }, 100);
+}
+
+// Auto-detect mobile on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.innerWidth < 768) {
+    document.getElementById('mobileToggle').checked = true;
+    document.body.classList.add('mobile-view');
+  }
+  renderMobileThresholds();
+});
+
+// ── THRESHOLD DATA ───────────────────────────────────────────────────────────
+var thresholds  = [0.15, 0.30, 0.50, 0.70, 0.80];
+var precisions  = [0.793, 0.882, 0.909, 0.919, 0.917];
+var recalls     = [0.979, 0.957, 0.851, 0.723, 0.702];
+var f1s         = [0.876, 0.918, 0.879, 0.809, 0.795];
+
+function renderMobileThresholds() {
+  var container = document.getElementById('mobileThreshContainer');
+  container.innerHTML = '';
+  
+  thresholds.forEach((t, i) => {
+    var card = document.createElement('div');
+    card.className = 'mobile-thresh-card';
+    if(t === 0.30) card.style.borderColor = AMBER;
+    
+    var html = `
+      <div class="mobile-thresh-header">
+        <span class="mobile-thresh-val">Threshold: ${t.toFixed(2)} ${t === 0.30 ? '⭐' : ''}</span>
+        <span class="pill" style="background:${t === 0.30 ? AMBER : '#E2E8F0'}; color:${t === 0.30 ? 'white' : 'var(--muted)'}; font-size:9px">
+          ${t === 0.30 ? 'RECOMMENDED' : 'STATED'}
+        </span>
+      </div>
+      <div class="mobile-thresh-bars">
+        <div class="mobile-thresh-bar-row">
+          <span class="mobile-thresh-label">PRECISION</span>
+          <div class="mobile-thresh-progress-bg">
+            <div class="mobile-thresh-progress-fill" style="width:${precisions[i]*100}%; background:${GREEN}"></div>
+          </div>
+          <span class="mobile-thresh-percent">${(precisions[i]*100).toFixed(1)}%</span>
+        </div>
+        <div class="mobile-thresh-bar-row">
+          <span class="mobile-thresh-label">RECALL</span>
+          <div class="mobile-thresh-progress-bg">
+            <div class="mobile-thresh-progress-fill" style="width:${recalls[i]*100}%; background:${RED}"></div>
+          </div>
+          <span class="mobile-thresh-percent">${(recalls[i]*100).toFixed(1)}%</span>
+        </div>
+        <div class="mobile-thresh-bar-row">
+          <span class="mobile-thresh-label">F1 SCORE</span>
+          <div class="mobile-thresh-progress-bg">
+            <div class="mobile-thresh-progress-fill" style="width:${f1s[i]*100}%; background:${PURPLE}"></div>
+          </div>
+          <span class="mobile-thresh-percent">${(f1s[i]*100).toFixed(1)}%</span>
+        </div>
+      </div>
+    `;
+    card.innerHTML = html;
+    container.appendChild(card);
+  });
+}
+
+// ── PLUGINS ──────────────────────────────────────────────────────────────────
+function avgLinePlugin(val, label) {
+  return {
+    id: 'avgLine',
+    afterDraw: function(chart) {
+      var ctx = chart.ctx;
+      var yAxis = chart.scales.y;
+      var y = yAxis.getPixelForValue(val);
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([5, 5]);
+      ctx.moveTo(chart.chartArea.left, y);
+      ctx.lineTo(chart.chartArea.right, y);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'bold 10px Arial';
+      ctx.fillText(label, chart.chartArea.right - 60, y - 5);
+      ctx.restore();
+    }
+  };
+}
+
+function avgLineVPlugin(val, label) {
+  return {
+    id: 'avgLineV',
+    afterDraw: function(chart) {
+      var ctx = chart.ctx;
+      var xAxis = chart.scales.x;
+      var x = xAxis.getPixelForValue(val);
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([5, 5]);
+      ctx.moveTo(x, chart.chartArea.top);
+      ctx.lineTo(x, chart.chartArea.bottom);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'bold 10px Arial';
+      ctx.fillText(label, x + 5, chart.chartArea.top + 15);
+      ctx.restore();
+    }
+  };
+}
+
+function threshLinePlugin(val, label, color) {
+  return {
+    id: 'threshLine',
+    afterDraw: function(chart) {
+      var ctx = chart.ctx;
+      var xAxis = chart.scales.x;
+      var x = xAxis.getPixelForValue(val);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, chart.chartArea.top);
+      ctx.lineTo(x, chart.chartArea.bottom);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px Arial';
+      ctx.fillText(label, x - 40, chart.chartArea.top - 10);
+      ctx.restore();
+    }
+  };
+}
+
+// ── OVERVIEW CHARTS ──────────────────────────────────────────────────────────
+
+// Donut
+new Chart(document.getElementById('donut1'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Good Risk', 'Bad Risk'],
+    datasets: [{
+      data: [76.4, 23.6],
+      backgroundColor: [GREEN, RED],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  },
+  options: {
+    cutout: '62%',
+    plugins: {
+      legend: { display: true, position: 'right' },
+      tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + '%'; } } }
+    }
+  }
+});
+
+// Savings bar
+new Chart(document.getElementById('savBar'), {
+  type: 'bar',
+  data: {
+    labels: ['none', 'little', 'moderate', 'quite rich', 'rich'],
+    datasets: [{
+      data: [50.3, 21.7, 10.7, 3.2, 0],
+      backgroundColor: [RED, AMBER, TEAL, GREEN, GREEN],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% bad rate'; } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' }, max: 60 },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Credit amount
+new Chart(document.getElementById('creditBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Good Risk', 'Bad Risk'],
+    datasets: [{
+      data: [2359, 6225],
+      backgroundColor: [GREEN, RED],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'DM ' + c.raw.toLocaleString(); } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return 'DM ' + v.toLocaleString(); } }, grid: { color: '#F1F5F9' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Duration
+new Chart(document.getElementById('durBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Good Risk', 'Bad Risk'],
+    datasets: [{
+      data: [17.7, 31.2],
+      backgroundColor: [GREEN, RED],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + ' months avg'; } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return v + ' mo'; } }, grid: { color: '#F1F5F9' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── EDA CHARTS ───────────────────────────────────────────────────────────────
+
+// Purpose bar
+var purposeValues = [14.9, 17.9, 22.7, 25.8, 27.0, 33.3, 44.1, 66.7];
+var purposeColors = purposeValues.map(function(v) {
+  return v > 40 ? RED : v > 25 ? AMBER : GREEN;
+});
+
+new Chart(document.getElementById('purposeBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Furniture', 'Radio/TV', 'Repairs', 'Business', 'Car', 'Dom. Appl.', 'Education', 'Vacation'],
+    datasets: [{
+      data: purposeValues,
+      backgroundColor: purposeColors,
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% bad rate'; } } }
+    },
+    scales: {
+      x: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' }, max: 80 },
+      y: { grid: { display: false } }
+    }
+  },
+  plugins: [avgLineVPlugin(23.6, 'avg 23.6%')]
+});
+
+// Housing
+new Chart(document.getElementById('housingBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Own', 'Rent', 'Free'],
+    datasets: [{
+      data: [15.3, 41.9, 48.1],
+      backgroundColor: [GREEN, AMBER, RED],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% bad rate'; } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' }, max: 60 },
+      x: { grid: { display: false } }
+    }
+  },
+  plugins: [avgLinePlugin(23.6, 'avg 23.6%')]
+});
+
+// Age
+new Chart(document.getElementById('ageBar'), {
+  type: 'bar',
+  data: {
+    labels: ['19-25', '26-35', '36-45', '46-55', '56+'],
+    datasets: [{
+      data: [32.1, 24.3, 19.8, 18.4, 14.2],
+      backgroundColor: [RED, AMBER, TEAL, GREEN, GREEN],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% bad rate'; } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' }, max: 45 },
+      x: { grid: { display: false } }
+    }
+  },
+  plugins: [avgLinePlugin(23.6, 'avg 23.6%')]
+});
+
+// Job
+new Chart(document.getElementById('jobBar'), {
+  type: 'bar',
+  data: {
+    labels: ['0 - Unskilled NR', '1 - Unskilled R', '2 - Skilled', '3 - Highly Skilled'],
+    datasets: [{
+      data: [45.5, 27.0, 22.9, 17.6],
+      backgroundColor: [RED, AMBER, TEAL, GREEN],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% bad rate'; } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' }, max: 55 },
+      x: { grid: { display: false } }
+    }
+  },
+  plugins: [avgLinePlugin(23.6, 'avg 23.6%')]
+});
+
+// ── UNDERWRITING MATRIX ───────────────────────────────────────────────────────
+var matrixData = {
+  'none':       { 'None': 51, 'Little': 44, 'Moderate': 38, 'Rich': 0  },
+  'little':     { 'None': 31, 'Little': 22, 'Moderate': 14, 'Rich': 0  },
+  'moderate':   { 'None': 18, 'Little': 10, 'Moderate': 5,  'Rich': 0  },
+  'quite rich': { 'None': 5,  'Little': 3,  'Moderate': 2,  'Rich': 0  },
+  'rich':       { 'None': 0,  'Little': 0,  'Moderate': 0,  'Rich': 0  }
+};
+
+function getCellBg(v) {
+  if (v >= 45) return '#FEE2E2';
+  if (v >= 30) return '#FEF3C7';
+  if (v >= 10) return '#FFF7ED';
+  if (v >  0)  return '#F0FDF4';
+  return '#DCFCE7';
+}
+function getCellColor(v) {
+  if (v >= 45) return '#991B1B';
+  if (v >= 30) return '#92400E';
+  if (v >= 10) return '#B45309';
+  if (v >  0)  return '#166534';
+  return '#14532D';
+}
+
+var tbody = document.getElementById('matrixBody');
+var savRows = ['none', 'little', 'moderate', 'quite rich', 'rich'];
+var chkCols = ['None', 'Little', 'Moderate', 'Rich'];
+savRows.forEach(function(sav) {
+  var tr = document.createElement('tr');
+  var th = document.createElement('th');
+  th.textContent = sav;
+  tr.appendChild(th);
+  chkCols.forEach(function(chk) {
+    var td = document.createElement('td');
+    var v = matrixData[sav][chk];
+    td.textContent = v + '%';
+    td.style.background = getCellBg(v);
+    td.style.color = getCellColor(v);
+    td.style.fontWeight = '600';
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+});
+
+// ── MODEL CHARTS ──────────────────────────────────────────────────────────────
+
+// Model comparison
+new Chart(document.getElementById('modelBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Logistic\nRegression', 'Random\nForest', 'Gradient\nBoosting'],
+    datasets: [{
+      data: [0.970, 0.970, 0.990],
+      backgroundColor: [MUTED, TEAL, GREEN],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'AUC ' + c.raw.toFixed(3); } } }
+    },
+    scales: {
+      y: { min: 0.95, max: 1.0, ticks: { callback: function(v) { return v.toFixed(3); } }, grid: { color: '#F1F5F9' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Feature importance
+new Chart(document.getElementById('featBar'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'Credit amount', 'Duration', 'credit_dur_ratio', 'credit_to_age',
+      'Savings level', 'Checking level', 'double_vuln', 'no_savings',
+      'no_checking', 'Purpose risk'
+    ],
+    datasets: [{
+      data: [18.4, 16.2, 14.8, 11.3, 9.7, 8.4, 6.2, 5.1, 4.8, 3.6],
+      backgroundColor: [RED, RED, RED, AMBER, AMBER, AMBER, PURPLE, PURPLE, PURPLE, TEAL],
+      borderRadius: 4,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return c.raw + '% importance'; } } }
+    },
+    scales: {
+      x: { ticks: { callback: function(v) { return v + '%'; } }, grid: { color: '#F1F5F9' } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// ── THRESHOLD CHART ───────────────────────────────────────────────────────────
+var fullThresholds  = [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80];
+var fullPrecisions  = [0.793, 0.838, 0.859, 0.882, 0.896, 0.911, 0.911, 0.909, 0.907, 0.907, 0.905, 0.919, 0.919, 0.917];
+var fullRecalls     = [0.979, 0.979, 0.957, 0.957, 0.915, 0.872, 0.872, 0.851, 0.830, 0.830, 0.809, 0.723, 0.723, 0.702];
+var fullF1s = fullPrecisions.map(function(p, i) {
+  return parseFloat((2 * p * fullRecalls[i] / (p + fullRecalls[i])).toFixed(3));
+});
+
+new Chart(document.getElementById('threshChart'), {
+  type: 'line',
+  data: {
+    labels: fullThresholds,
+    datasets: [
+      { label: 'Precision', data: fullPrecisions, borderColor: GREEN,  backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 4, tension: 0.3 },
+      { label: 'Recall',    data: fullRecalls,    borderColor: RED,    backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 4, tension: 0.3 },
+      { label: 'F1 Score',  data: fullF1s,        borderColor: PURPLE, backgroundColor: 'transparent', borderWidth: 2,   pointRadius: 3, tension: 0.3, borderDash: [5, 4] }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: function(c) { return c.dataset.label + ': ' + c.raw.toFixed(3); }
+        }
+      }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Classification Threshold' } },
+      y: { min: 0.5, max: 1.0, title: { display: true, text: 'Score' }, grid: { color: '#F1F5F9' } }
+    }
+  },
+  plugins: [threshLinePlugin(0.30, 'Recommended 0.30', AMBER)]
+});
+
+// ── SEGMENTATION CHARTS ───────────────────────────────────────────────────────
+
+// Tier pie
+new Chart(document.getElementById('tierPie'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Low Risk', 'High Risk', 'Medium Risk'],
+    datasets: [{
+      data: [760, 232, 8],
+      backgroundColor: [GREEN, RED, AMBER],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  },
+  options: {
+    cutout: '55%',
+    plugins: {
+      legend: { display: true, position: 'right' },
+      tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + ' applicants'; } } }
+    }
+  }
+});
+
+// Tier credit
+new Chart(document.getElementById('tierCredit'), {
+  type: 'bar',
+  data: {
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [2352, 3840, 6264],
+      backgroundColor: [GREEN, AMBER, RED],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'DM ' + c.raw.toLocaleString(); } } }
+    },
+    scales: {
+      y: { ticks: { callback: function(v) { return 'DM ' + v.toLocaleString(); } }, grid: { color: '#F1F5F9' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+</body>
+</html>
